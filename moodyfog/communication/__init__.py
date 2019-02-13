@@ -12,6 +12,7 @@ analysis based on the elaboration done at earlier stages in the Mist network.
 
 import time
 import logging
+import socket
 from enum import Enum
 from paho.mqtt.client import Client
 from threading import  Thread
@@ -32,10 +33,7 @@ WAIT_TO_RECONNECT = 1 #sec
 
 logger = Logger( __name__ )
 
-class Communication ( Enum ):
-    Socket = 0
-    Serial = 1
-    MQTT = 2
+
 
 
 class MQTTClient ( Client ):
@@ -123,10 +121,30 @@ class ExternalCommunicator():
     
     '''
     
-    def __init__( self, host, port, strategy =  ):        
+    def __init__( self, host, port ):        
         self.host = host
         self.port = port
         
+        self.logger = logging.getLogger( __name__ )
+
+        
+    
+    def forward( self, data ):    
+        
+        with socket.socket( socket.AF_INET, socket.SOCK_STREAM ) as s:
+            s.connect( ( self.host, self.port ) )
+            s.sendall(b'Hello, world')
+            resp = s.recv(1024)
+            self.logger.info( repr( resp ) )
+        
+    
+    def listen( self ):
+        #TODO
+        pass
+    
+    def stop( self ):
+        #TODO
+        pass
         
         
         
