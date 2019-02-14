@@ -53,12 +53,14 @@ class MQTTClient ( Client ):
     
     @property
     def on_connect ( self ):
-        self.logger.info("{} successfully connected to the broker!".format( str( self._client_id, "UTF-8" ) ) )
+        self.logger.info("{} successfully connected to the broker!".format( str( self._client_id ), "UTF-8" ) )
+        self.subscribe( "+/audio/+", qos = 0 )
+
     
     @property
     def on_disconnect ( self ):
-        self.logger.info("{} disconnected from the broker!".format( str ( self._client_id, "UTF-8" ) ) )
-    
+        self.logger.info("{} disconnected from the broker!".format( str ( self._client_id ), "UTF-8" ) )
+    '''    
     @property
     def on_message ( self, client, userdata, message ):
         
@@ -66,7 +68,7 @@ class MQTTClient ( Client ):
         
         self.logger.info( "Data received from sensor {}, data type: {}, payload: {}".format( sensor_id, data_type, message.payload, "UTF-8" ) )
         self.table_handler.update( sensor_id, data_type, message.payload )
-
+    '''
     
     
     
@@ -121,7 +123,7 @@ class ExternalCommunicator():
     
     '''
     
-    def __init__( self, host, port ):        
+    def __init__( self, host="localhost", port="6666" ):        
         self.host = host
         self.port = port
         
@@ -131,12 +133,14 @@ class ExternalCommunicator():
     
     def forward( self, data ):    
         
+        '''
         with socket.socket( socket.AF_INET, socket.SOCK_STREAM ) as s:
             s.connect( ( self.host, self.port ) )
             s.sendall(b'Hello, world')
             resp = s.recv(1024)
             self.logger.info( repr( resp ) )
-        
+        '''
+        pass
     
     def listen( self ):
         #TODO

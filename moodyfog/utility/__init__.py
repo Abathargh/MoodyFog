@@ -65,18 +65,16 @@ class TableHandler():
         
         self.logger.info( "data table successfully initialized!" )
     
-    def update( self, sensor_id, data_type, data ):
-        
-        sensor_data = sensor_id.split("_")
-        area_id = "{}_{}".format( sensor_data[0], sensor_data[1] )
-        
-        if self.area_tables[ area_id ][ data_type ] != data :
+    def update( self, res_area_id, data_type, data ):
+          
+        if res_area_id in self.areas_table.keys() and not ( self.areas_table[ res_area_id ][ data_type ] == data ) :
             
             self.mutex.acquire()
             
             try:
-                self.area_tables[ area_id ][ data_type ] = data
-                self.ext_communicator.send( data )
+                self.area_tables[ res_area_id ][ data_type ] = data
+                #self.ext_communicator.send( data )
+                print(self)
                 
             except Exception as e:
                 self.logger.error("Error while processing data! {}".format( e ) )
