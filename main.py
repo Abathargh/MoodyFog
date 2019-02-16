@@ -43,13 +43,10 @@ The logic architecture of the fog node is as follows:
 
 '''
 
-from moodyfog import communication, utility
-from moodyfog.communication import MQTTClient, ExternalCommunicator
-from moodyfog.utility import TableHandler
+import moodyfog.communication, moodyfog.utility
 
 from pkg_resources import Requirement, resource_filename
 import configparser
-import time
 
 
 TOPICS = ( "audio", "light", "temperature", "humidity", "presence", "photo" )
@@ -58,6 +55,9 @@ area_table = dict()
 
 
 if __name__ == "__main__" :
+    
+    moodyfog.communication.logger.console ( True )
+    moodyfog.utility.logger.console ( True )
     
     config = configparser.ConfigParser()
 
@@ -71,37 +71,9 @@ if __name__ == "__main__" :
     BROKER_ADDRESS = config["Communication"]["BROKER_ADDRESS"]
     BROKER_PORT = int ( config["Communication"]["BROKER_PORT"] )
     
-    communication.logger.console ( True )
-    utility.logger.console ( True )
 
+    moodyfog.connect( BROKER_ADDRESS, BROKER_PORT )
+    moodyfog.start_listening()
     
-    external_communicator = ExternalCommunicator()
     
-    table_handler = TableHandler( external_communicator )
-    
-    mqtt_client = MQTTClient( table_handler )
-   
-    try:    
-        mqtt_client.connect( host = BROKER_ADDRESS, port = BROKER_PORT )
-    
-    except:
-        print( "Error attempting to connect")    
-    
-    def on_message ( client, userdata, message ):
-    
-        res_area_id, data_type, sensor_id = message.topic.split("/")
-        
-        print( "Data received from sensor {}, data type: {}, payload: {}".format( sensor_id, data_type, message.payload.decode() , "UTF-8" ) )
-        table_handler.update( res_area_id, data_type, message.payload )
-        
-    mqtt_client.on_message = on_message
-                
-    
-    try:
-        mqtt_client.loop_start()
-        while True: 
-            time.sleep(0.1)
-            
-    except KeyboardInterrupt :
-        mqtt_client.loop_stop()
-        mqtt_client.disconnect()
+

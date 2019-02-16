@@ -53,58 +53,83 @@ from threading import Lock
 
 logger = Logger( __name__ )
 
+'''
 
+The following class is a dictionary which can be observed by an object extending the
+moodyfog.utility.Observer class and that has a check on __setitem__  that makes it so that
+the dictionary isn't touched when
 
-class TableHandler():
+'''
+
+class Observer():
     
-    def __init__( self, ext_communicator ):        
-        self.mutex = Lock()
-        self.logger = logging.getLogger( __name__ )
-        self.areas_table = dict()
-        self.ext_communicator = ext_communicator
+    def update( self, updated_data ):
+        pass
+    
+class Observable():
+    
+    def __init__( self ):
+        self.observer_list = list()
+    
+    def set_observer( self, observer ):
+        self.observer_list.append( observer )
         
-        self.logger.info( "data table successfully initialized!" )
+    def notify_observers( self, updated_data ):
+        for observer in self.observer_list:
+            observer.update( updated_data )
+
+class ObservableMultidimensionalDict( dict, Observable ):
     
-    def update( self, res_area_id, data_type, data ):
-          
-        if res_area_id in self.areas_table.keys() and not ( self.areas_table[ res_area_id ][ data_type ] == data ) :
-            
+    def __init__( self ):   
+        Observable.__init__(self)     
+        self.logger = logging.getLogger( __name__ )  
+        self.mutex = Lock()
+        self.repetitions_admitted = False
+
+        self.nested_dict_observer = Observer()
+
+        def update ( updated_value ):
+            return self.notify_observers( {list(self.keys())[list(self.values()).index(updated_value)]: updated_value} )
+        
+        self.nested_dict_observer.update = update
+    
+    def __setitem__( self, key, value ):
+        if self.repetitions_admitted or ( ( not self.repetitions_admitted )   
+                                    and ( key not in self.keys() or ( key in self.keys() and not ( self[ key ] == value ) ) ) ) :
+                
             self.mutex.acquire()
             
             try:
-                self.area_tables[ res_area_id ][ data_type ] = data
-                #self.ext_communicator.send( data )
-                print(self)
+                if ( isinstance( value, dict ) ):
+                    value = ObservableMultidimensionalDict()
+                    value.set_observer( self.nested_dict_observer )
+                    
+                super().__setitem__( key, value )
+                self.notify_observers( self )
                 
-            except Exception as e:
-                self.logger.error("Error while processing data! {}".format( e ) )
-                
+
             finally : 
                 self.mutex.release()
                 
-    def __str__( self ):            
-        
-        table_str = ""
-        
-        for sensor_id in self.areas_table.keys():
-            
-            table_str += "{} data table\n".format( sensor_id )
-            
-            for data_type in self.areas_table[ sensor_id ].keys() :
+class ObservableDict( dict, Observable ):
+    
+    def __init__( self ):   
+        Observable.__init__(self)     
+        self.logger = logging.getLogger( __name__ )  
+        self.mutex = Lock()
+        self.repetitions_admitted = False
+
+    
+    def __setitem__( self, key, value ):
+        if self.repetitions_admitted or ( ( not self.repetitions_admitted )   
+                                    and ( key not in self.keys() or ( key in self.keys() and not ( self[ key ] == value ) ) ) ) :
                 
-                table_str += "{} : {}\n".format( data_type, self.areas_table[ sensor_id ][ data_type ] )
+            self.mutex.acquire()
+            
+            try:                    
+                super().__setitem__( key, value )
+                self.notify_observers( ( key, value ) )
                 
-            table_str += "\n"
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
+
+            finally : 
+                self.mutex.release()

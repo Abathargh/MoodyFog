@@ -18,7 +18,7 @@ from paho.mqtt.client import Client
 from threading import  Thread
 
 from ..utility.log import Logger
-from moodyfog.utility import TableHandler
+from ..utility import ObservableDict, Observer
 
 
 '''
@@ -28,57 +28,42 @@ Connection settings
 '''
 
 MAX_ATTEMPTS = 5
-WAIT_TO_RECONNECT = 1 #sec
+WAIT_TO_RECONNECT = 5 #sec
 
 
 logger = Logger( __name__ )
 
+FOG_ID = 0
+INT_TOPICS = ("+/audio/+", "+/light/+", "+/temperature/+", "+/humidity/+", "+/presence/+", "+/photo/+")
+EXT_TOPIC = "+/action"
 
 
 
-class MQTTClient ( Client ):
+class MQTTClient():
     
-    def __init__( self, table_handler ):
-        super().__init__( "Subscriber_fog" )
-        self.logger = logging.getLogger( __name__ )
-        self.table_handler = table_handler
+    def __init__( self, client_id ):
+        self.client = Client( client_id )
+        self.logger = logging.getLogger( __name__ )  
+        self.client_id = client_id
         
+        '''
     
+        Redefining MQTT client callbacks
     
-    '''
-    
-    Overriding some event based callback Client methods
-    
-    ''' 
-    
-    @property
-    def on_connect ( self ):
-        self.logger.info("{} successfully connected to the broker!".format( str( self._client_id ), "UTF-8" ) )
-        self.subscribe( "+/audio/+", qos = 0 )
+        '''   
 
-    
-    @property
-    def on_disconnect ( self ):
-        self.logger.info("{} disconnected from the broker!".format( str ( self._client_id ), "UTF-8" ) )
-    '''    
-    @property
-    def on_message ( self, client, userdata, message ):
-        
-        sensor_id, data_type = message.topic.split("/")
-        
-        self.logger.info( "Data received from sensor {}, data type: {}, payload: {}".format( sensor_id, data_type, message.payload, "UTF-8" ) )
-        self.table_handler.update( sensor_id, data_type, message.payload )
-    '''
-    
-    
-    
+        def on_disconnect( client, userdata, rc ):
+            self.logger.info("{} disconnected from the broker!".format( str ( self.client._client_id ), "UTF-8" ) )
+
+        self.client.on_disconnect = on_disconnect
+
     '''
     
     Adding the retry feature to the connect method
     
     '''
         
-    def connect ( self, host, port = 1883, keepalive = 60, bind_address = "" ):
+    def connect ( self, host, port = 1883 ):
         
         '''
         
@@ -92,8 +77,8 @@ class MQTTClient ( Client ):
         while attempts < MAX_ATTEMPTS :                                       
             
             try:
-                self.logger.info ( "Connecting to the broker... attempt number {}".format ( attempts ) )
-                super().connect( host = host, port = port )
+                self.logger.info ( "{} connecting to the broker...attempt number {}".format ( self.client_id, attempts+1 ) )
+                self.client.connect( host = host, port = port )
             
             except ConnectionError: 
                    
@@ -107,48 +92,81 @@ class MQTTClient ( Client ):
             self.logger.error ( "Couldn't connect to the broker!" )
             raise ConnectionError
         
+    
+    def disconnect( self ):
+        self.client.disconnect()
         
 
-class ExternalCommunicator():
+    
+    def listen(self):
+        
+        def task():
+            
+            try:
+                self.client.loop_start()
+                while True: 
+                    time.sleep(0.1)
+                    
+            except KeyboardInterrupt :
+                self.client.loop_stop()
+                self.client.disconnect()
 
-    '''
-    
-    This class provides a way to communicate with the external service which will analyze the partially elaborated data that has been collected 
-    by the Mist network.
-    Different ways of handling such communication are given, so that it's easy to switch to different ones in order to test the software in an offline 
-    environment.
-    
-    It also provides a way to listen to the return messages sent by the analysis service (like a Cloud or similar): this communicator acts as both a client and
-    a server.
-    
-    '''
-    
-    def __init__( self, host="localhost", port="6666" ):        
-        self.host = host
-        self.port = port
+        thread = Thread( target = task )
+        thread.start()
         
-        self.logger = logging.getLogger( __name__ )
+class InternalCommunicator( MQTTClient, Observer ):
+    
+    def __init__( self, client_id, table ):
+        super().__init__( client_id )
+        self.table = table
+        
+        def on_connect( client, userdata, flags, rc ):
+            self.logger.info("{} successfully connected to the broker!".format( str( self.client._client_id.decode()), "UTF-8" ) )
+            
+            for topic in INT_TOPICS:
+                self.client.subscribe( topic, qos = 0 )
+         
+        
+        def on_message ( client, userdata, message ):
+            res_area_id, data_type, sensor_id = message.topic.split("/")
+            
+            self.logger.info( "Data received from sensor {}, data type: {}, payload: {}".format( sensor_id, data_type, message.payload.decode() , "UTF-8" ) )
+            if res_area_id not in self.table.keys():
+                self.table[ res_area_id ] = dict()
+                
+            self.table[ res_area_id ][ data_type ] = message.payload
+            
+            
+        self.client.on_connect = on_connect
+        self.client.on_message = on_message
+        
+    def update( self, updated_data ):
+        self.client.publish( topic = "{}/actuator/".format( updated_data[0] ), payload = updated_data[1], qos = 0 )
+1
+                
+class ExternalCommunicatorMQTT ( MQTTClient, Observer ):
+    
+    def __init__( self, client_id, table ):
+        super().__init__( client_id )
+        self.table = table
+        
+        def on_connect( client, userdata, flags, rc ):
+            self.logger.info("{} successfully connected to the broker!".format( self.client._client_id.decode(), "UTF-8" ) )
+            self.client.subscribe( EXT_TOPIC, qos = 0 )
+            
+        def on_message ( client, userdata, message ):
+        
+            area = message.topic.split("/")[0]
+            
+            self.logger.info( "Data received from neural network, situation described: {}, in area: {}".format( message.payload.decode(), area, "UTF-8" ) )
+            self.table[ area ] = message.payload
+            
+        self.client.on_connect = on_connect
+        self.client.on_message = on_message
+        
+    def update( self, updated_data ):
+        self.client.publish( topic = "{}/{}".format( FOG_ID, list( updated_data.keys())[0] ), payload = str(updated_data[list( updated_data.keys())[0]]), qos = 0 )
+        
 
-        
     
-    def forward( self, data ):    
-        
-        '''
-        with socket.socket( socket.AF_INET, socket.SOCK_STREAM ) as s:
-            s.connect( ( self.host, self.port ) )
-            s.sendall(b'Hello, world')
-            resp = s.recv(1024)
-            self.logger.info( repr( resp ) )
-        '''
-        pass
     
-    def listen( self ):
-        #TODO
-        pass
-    
-    def stop( self ):
-        #TODO
-        pass
-        
-        
-        
