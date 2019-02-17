@@ -12,7 +12,7 @@ analysis based on the elaboration done at earlier stages in the Mist network.
 
 import time
 import logging
-import socket
+import json
 from enum import Enum
 from paho.mqtt.client import Client
 from threading import  Thread
@@ -101,13 +101,15 @@ class MQTTClient():
     def listen(self):
         
         def task():
-            
+        
+            running = True
             try:
                 self.client.loop_start()
-                while True: 
+                while running: 
                     time.sleep(0.1)
                     
             except KeyboardInterrupt :
+                running = False
                 self.client.loop_stop()
                 self.client.disconnect()
 
@@ -134,14 +136,14 @@ class InternalCommunicator( MQTTClient, Observer ):
             if res_area_id not in self.table.keys():
                 self.table[ res_area_id ] = dict()
                 
-            self.table[ res_area_id ][ data_type ] = message.payload
+            self.table[ res_area_id ][ data_type ] = message.payload.decode()
             
             
         self.client.on_connect = on_connect
         self.client.on_message = on_message
         
     def update( self, updated_data ):
-        self.client.publish( topic = "{}/actuator/".format( updated_data[0] ), payload = updated_data[1], qos = 0 )
+        self.client.publish( topic = "{}/actuator".format( updated_data[0] ), payload = updated_data[1], qos = 0 )
 1
                 
 class ExternalCommunicatorMQTT ( MQTTClient, Observer ):
@@ -165,7 +167,7 @@ class ExternalCommunicatorMQTT ( MQTTClient, Observer ):
         self.client.on_message = on_message
         
     def update( self, updated_data ):
-        self.client.publish( topic = "{}/{}".format( FOG_ID, list( updated_data.keys())[0] ), payload = str(updated_data[list( updated_data.keys())[0]]), qos = 0 )
+        self.client.publish( topic = "neural/{}/{}".format( FOG_ID, list( updated_data.keys())[0] ), payload = json.dumps( updated_data[list( updated_data.keys())[0]] ), qos = 0 )
         
 
     
