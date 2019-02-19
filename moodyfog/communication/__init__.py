@@ -167,8 +167,4 @@ class ExternalCommunicatorMQTT ( MQTTClient, Observer ):
         self.client.on_message = on_message
         
     def update( self, updated_data ):
-        self.client.publish( topic = "neural/{}/{}".format( FOG_ID, list( updated_data.keys())[0] ), payload = json.dumps( updated_data[list( updated_data.keys())[0]] ), qos = 0 )
-        
-
-    
-    
+        self.client.publish( topic = "neural/{}/{}".format( FOG_ID, list( updated_data.keys() )[0] ), payload = json.dumps( updated_data[list( updated_data.keys())[0]] ), qos = 0 )

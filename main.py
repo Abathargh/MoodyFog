@@ -62,7 +62,7 @@ if __name__ == "__main__" :
     config = configparser.ConfigParser()
 
     try :
-        if len ( config.read ( "./moodyfog/fog.conf" ) ) == 0 :
+        if len ( config.read ( "/home/pi/Tesi/MoodyFog/moodyfog/fog.conf" ) ) == 0 :
             config.read ( resource_filename ( Requirement.parse ( "Moody" ), "moody.conf" ) )
         
     except :
