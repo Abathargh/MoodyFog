@@ -42,7 +42,7 @@ The logic architecture of the fog node is as follows:
 
 
 '''
-
+import argparse
 import moodyfog.communication, moodyfog.utility
 
 from pkg_resources import Requirement, resource_filename
@@ -56,9 +56,14 @@ area_table = dict()
 
 if __name__ == "__main__" :
     
-    moodyfog.communication.logger.console ( True )
-    moodyfog.utility.logger.console ( True )
-    
+    parser = argparse.ArgumentParser()
+    parser.add_argument ( "--verbose", "-v", help = "If the verbose option is selected, the program prints informations about the energy level of every analyzed frame", action = "store_true" )
+    args = parser.parse_args()
+
+    if args.verbose:
+        moodyfog.communication.logger.console ( True )
+        moodyfog.utility.logger.console ( True )
+        
     config = configparser.ConfigParser()
 
     try :
