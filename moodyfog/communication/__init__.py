@@ -29,6 +29,7 @@ Connection settings
 
 MAX_ATTEMPTS = 5
 WAIT_TO_RECONNECT = 5 #sec
+TMR_ACTIVE = False
 
 
 logger = Logger( __name__ )
@@ -138,7 +139,7 @@ class InternalCommunicator( MQTTClient, Observer ):
                 self.table[ res_area_id ] = dict()
 
 
-            if data_type == "audio":
+            if TMR_ACTIVE and data_type == "audio":
                 self.audio_tmr[sensor_id] = message.payload.decode()
                 if len( self.audio_tmr ) == 3:
                     verdetto = tmr_decide( self.audio_tmr )
@@ -168,9 +169,7 @@ class ExternalCommunicatorMQTT ( MQTTClient, Observer ):
             self.client.subscribe( EXT_TOPIC, qos = 0 )
 
         def on_message ( client, userdata, message ):
-
             area = message.topic.split("/")[0]
-
             self.logger.info( "Data received from neural network, situation described: {}, in area: {}".format( message.payload.decode(), area, "UTF-8" ) )
             self.table[ area ] = message.payload
 
