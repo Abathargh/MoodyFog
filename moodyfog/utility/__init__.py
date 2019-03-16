@@ -113,13 +113,12 @@ class ObservableMultidimensionalDict( dict, Observable ):
             self.mutex.acquire()
 
             try:
-                if ( isinstance( value, dict ) ):
+                if isinstance( value, dict ):
                     value = ObservableMultidimensionalDict()
                     value.set_observer( self.nested_dict_observer )
 
                 super().__setitem__( key, value )
                 self.notify_observers( self )
-
 
             finally :
                 self.mutex.release()
@@ -142,7 +141,6 @@ class ObservableDict( dict, Observable ):
             try:
                 super().__setitem__( key, value )
                 self.notify_observers( ( key, value ) )
-
 
             finally :
                 self.mutex.release()

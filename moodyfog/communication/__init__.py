@@ -65,14 +65,12 @@ class MQTTClient():
     '''
 
     def connect ( self, host, port = 1883 ):
-
         '''
 
         The subscriber tries to connect to the broker
         if it's not successful it will retry for a maximum of MAX_ATTEMPTS times
 
         '''
-
         attempts = 0
 
         while attempts < MAX_ATTEMPTS :
@@ -82,7 +80,6 @@ class MQTTClient():
                 self.client.connect( host = host, port = port )
 
             except ConnectionError:
-
                 time.sleep( WAIT_TO_RECONNECT )
                 attempts += 1
                 continue
@@ -102,13 +99,12 @@ class MQTTClient():
     def listen(self):
 
         def task():
-
             running = True
             try:
                 self.client.loop_start()
                 while running:
                     time.sleep(0.1)
-
+                    
             except KeyboardInterrupt :
                 running = False
                 self.client.loop_stop()
