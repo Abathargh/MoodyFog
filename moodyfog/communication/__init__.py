@@ -13,6 +13,7 @@ analysis based on the elaboration done at earlier stages in the Mist network.
 import time
 import logging
 import json
+import pyaudio
 from enum import Enum
 from paho.mqtt.client import Client
 from threading import  Thread
