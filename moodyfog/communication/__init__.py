@@ -133,7 +133,7 @@ class InternalCommunicator( MQTTClient, Observer ):
 
         def on_message ( client, userdata, message ):
             res_area_id, data_type, sensor_id = message.topic.split("/")
-            self.logger.info( "Data received from sensor {}, data type: {}, window size: {}".format( sensor_id, data_type, str(len(self.window)) , "UTF-8" ) )
+            #self.logger.info( "Data received from sensor {}, data type: {}, window size: {}".format( sensor_id, data_type, str(len(self.window)) , "UTF-8" ) )
 
             chunk = AudioChunk( message.payload, pyaudio.paInt32 )
             self.window.append( chunk )
@@ -143,7 +143,7 @@ class InternalCommunicator( MQTTClient, Observer ):
 
             if len( self.window ) >= 80:
                 tipo = self.window.audio_type(0.9, -55.4, 3)
-                print(tipo)
+                self.logger.info("Received:"+str(tipo))
                 self.table[ res_area_id ][ data_type ] = tipo
                 self.window = ChunkWindow()
 
