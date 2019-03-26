@@ -134,7 +134,7 @@ class InternalCommunicator( MQTTClient, Observer ):
             res_area_id, data_type, sensor_id = message.topic.split("/")
 
             self.logger.info( "Data received from sensor {}, data type: {}, window size: {}".format( sensor_id, data_type, str(len(self.window)) , "UTF-8" ) )
-            chunk = AudioChunk( message.payload.decode(), pyaudio.paInt32 )
+            chunk = AudioChunk( b""+message.payload, pyaudio.paInt32 )
             print(chunk)
             self.window.append( chunk )
 
