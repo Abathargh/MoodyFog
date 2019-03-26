@@ -139,6 +139,7 @@ class InternalCommunicator( MQTTClient, Observer ):
 
 
             if len( window ) == 80:
+                print(self.window.audio_type())
                 self.table[ res_area_id ][ data_type ] = self.window.audio_type()
                 self.window = ChunkWindow()
 
