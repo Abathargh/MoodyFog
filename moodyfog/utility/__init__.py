@@ -61,6 +61,23 @@ the dictionary isn't touched when
 
 '''
 
+def differences(l):
+    diff = []
+    c = 0
+
+    while c < len(l) - 1:
+        diff.append(abs(l[c + 1] - l[c]))
+        c += 1
+
+    return diff
+
+
+def average(l):
+
+    avg = sum(l) / len(l)
+
+    return avg
+
 def tmr_decide( input_dict ):
 
     in1, in2, in3 = list( input_dict.values() )
