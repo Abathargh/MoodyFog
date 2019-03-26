@@ -144,7 +144,7 @@ class InternalCommunicator( MQTTClient, Observer ):
                 self.window = ChunkWindow()
 
             self.window.append( AudioChunk( message.payload.decode(), pyaudio.paInt32 ) )
-
+            print(len(self.window))
 
         self.client.on_connect = on_connect
         self.client.on_message = on_message
