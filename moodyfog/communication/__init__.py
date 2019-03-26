@@ -134,16 +134,16 @@ class InternalCommunicator( MQTTClient, Observer ):
             res_area_id, data_type, sensor_id = message.topic.split("/")
 
             self.logger.info( "Data received from sensor {}, data type: {}, window size: {}".format( sensor_id, data_type, str(len(self.window)) , "UTF-8" ) )
+            self.window.append( AudioChunk( message.payload.decode(), pyaudio.paInt32 ) )
+
             if res_area_id not in self.table.keys():
                 self.table[ res_area_id ] = dict()
 
 
             if len( self.window ) == 80:
-                print(self.window.audio_type())
                 self.table[ res_area_id ][ data_type ] = self.window.audio_type()
                 self.window = ChunkWindow()
 
-            self.window.append( AudioChunk( message.payload.decode(), pyaudio.paInt32 ) )
 
         self.client.on_connect = on_connect
         self.client.on_message = on_message
