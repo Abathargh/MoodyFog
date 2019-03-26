@@ -18,6 +18,7 @@ from paho.mqtt.client import Client
 from threading import  Thread
 
 from ..utility.log import Logger
+from ..audio.structures import ChunkWindow, AudioChunk
 from ..utility import tmr_decide, ObservableDict, Observer
 
 
@@ -104,7 +105,7 @@ class MQTTClient():
                 self.client.loop_start()
                 while running:
                     time.sleep(0.1)
-                    
+
             except KeyboardInterrupt :
                 running = False
                 self.client.loop_stop()
@@ -119,6 +120,8 @@ class InternalCommunicator( MQTTClient, Observer ):
         super().__init__( client_id )
         self.table = table
         self.audio_tmr = dict()
+        self.window = ChunkWindow()
+
 
         def on_connect( client, userdata, flags, rc ):
             self.logger.info("{} successfully connected to the broker!".format( str( self.client._client_id.decode()), "UTF-8" ) )
@@ -135,16 +138,11 @@ class InternalCommunicator( MQTTClient, Observer ):
                 self.table[ res_area_id ] = dict()
 
 
-            if TMR_ACTIVE and data_type == "audio":
-                self.audio_tmr[sensor_id] = message.payload.decode()
-                if len( self.audio_tmr ) == 3:
-                    verdetto = tmr_decide( self.audio_tmr )
-                    self.logger.info("Tmr choosing... {}".format( verdetto ) )
-                    if not verdetto is None:
-                        self.table[ res_area_id ][ data_type ] = verdetto
-                    self.audio_tmr = dict()
-            else:
-                self.table[ res_area_id ][ data_type ] = message.payload.decode()
+            if len( window ) == 80:
+                self.table[ res_area_id ][ data_type ] = self.window.audio_type()
+                self.window = ChunkWindow()
+
+            self.window.add( AudioChunk( message.payload.decode(), pyaudio.paInt32 ) )
 
 
         self.client.on_connect = on_connect
